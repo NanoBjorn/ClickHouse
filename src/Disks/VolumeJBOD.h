@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include <Disks/IVolume.h>
 
 namespace DB
@@ -13,8 +15,10 @@ namespace DB
 class VolumeJBOD : public IVolume
 {
 public:
-    VolumeJBOD(String name_, Disks disks_, UInt64 max_data_part_size_)
-        : IVolume(name_, disks_), max_data_part_size(max_data_part_size_)
+    VolumeJBOD(String name_, Disks disks_, UInt64 max_data_part_size_, bool are_merges_allowed_in_config_)
+        : IVolume(name_, disks_)
+        , max_data_part_size(max_data_part_size_)
+        , are_merges_allowed_in_config(are_merges_allowed_in_config_)
     {
     }
 
@@ -24,6 +28,8 @@ public:
         const String & config_prefix,
         DiskSelectorPtr disk_selector
     );
+
+    void updateFromConfig(const Poco::Util::AbstractConfiguration & config, const String & config_prefix);
 
     VolumeType getType() const override { return VolumeType::JBOD; }
 
@@ -41,6 +47,16 @@ public:
 
     /// Max size of reservation
     UInt64 max_data_part_size = 0;
+
+    bool areMergesAllowed() const override;
+
+    void setAllowMergesFromQuery(bool allow) override;
+
+    /// True if parts on this volume participate in merges according to configuration.
+    bool are_merges_allowed_in_config = true;
+
+    /// True if parts on this volume participate in merges according to START/STOP MERGES ON VOLUME.
+    std::shared_ptr<bool> are_merges_allowed_from_query;
 private:
     mutable std::atomic<size_t> last_used = 0;
 };
